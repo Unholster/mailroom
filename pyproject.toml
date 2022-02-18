@@ -8,6 +8,7 @@ authors = ["Sebastian Acuna <sebastian@unholster.com>"]
 python = "^3.8"
 flask-lambda = "^0.0.4"
 python-decouple = "^3.6"
+yarl = "^1.7.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.1"

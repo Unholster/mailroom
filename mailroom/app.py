@@ -1,6 +1,5 @@
 from collections import defaultdict
 from email.message import EmailMessage
-from email.mime.text import MIMEText
 import json
 import logging
 import smtplib
@@ -8,7 +7,8 @@ from typing import Iterable, Tuple, List
 from decouple import config
 from flask import request
 from flask_lambda import FlaskLambda
-from .dicttemplate import DictTemplate
+from yarl import URL
+from .datatemplate import DataTemplate
 
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 app = FlaskLambda(__name__)
 
 
-MAIL_URL = config('MAIL_URL', '')
+MAIL_URL = config('MAIL_URL', '', cast=URL)
 
 
 def debug_info():
@@ -26,41 +26,56 @@ def debug_info():
     print(f'MAIL_URL = "{MAIL_URL}"')
     print('=================')
 
+    assert (
+        MAIL_URL is None
+        or MAIL_URL.scheme in ('smtp'),
+        'MAIL_URL must use smtp:// scheme'
+    )
+
 
 @app.route('/jobs', methods=['POST'])
 def post_jobs():
     ''''Receives an e-mail send job'''
     try:
         payload = request.json
-    except Exception:
+    except Exception as e:
+        logger.exception(e)
         return errors_response(['Must provide JSON payload'])
 
-    errors = validate(
+    validation_errors = validate(
         ('template' in payload, 'Must include `template`'),
         ('data' in payload, 'Must include `data`'),
     )
 
-    if errors:
-        return errors_response(errors)
+    try:
+        template = DataTemplate(payload['template'])
+    except Exception as e:
+        validation_errors.append([f'Could not parse template: {e}'])
 
-    sent = failed = 0
+    if validation_errors:
+        return errors_response(validation_errors)
 
-    for data in payload['data']:
+    succeeded = []
+    errors = []
+
+    for item in payload['data']:
         try:
-            send_email(make_email(
-                template=DictTemplate(payload['template']),
-                data=data,
-            ))
-            sent += 1
+            data = defaultdict(str, template.render(**item))
+            print(data)
+            send_message(
+                from_address=data['from'],
+                to_address=data['to'],
+                message=make_message(data)
+            )
+            succeeded.append(True)
         except Exception as e:
-            logger.exception(e)
-            failed += 1
+            errors.append(e)
 
     return (
         json.dumps(
             {
-                'sent': f'Sent {sent} emails',
-                'failed': f'Could not send {failed} emails'
+                'message': 'Sent {} emails'.format(len(succeeded)),
+                'errors': [str(e) for e in errors],
             },
             indent=4, sort_keys=True
         ),
@@ -69,17 +84,34 @@ def post_jobs():
     )
 
 
-def send_email(message: EmailMessage) -> None:
-    print(message)
+def send_message(
+    from_address: str,
+    to_address: str,
+    message: EmailMessage
+) -> None:
+    '''Sends an email message to the server specified by MAIL_URL'''
+
+    if MAIL_URL is None:
+        return
+
+    with smtplib.SMTP(MAIL_URL.host, MAIL_URL.port) as connection:
+        connection.set_debuglevel(1)
+        connection.starttls()
+        if MAIL_URL.user:
+            connection.login(
+                MAIL_URL.user,
+                MAIL_URL.password
+            )
+        connection.send_message(message)
 
 
-def make_email(template: DictTemplate, data: dict) -> EmailMessage:
-    rendered = defaultdict(str, template.render(**data))
-
+def make_message(data: dict) -> EmailMessage:
     message = EmailMessage()
-    message['subject'] = rendered['subject']
-    message.add_alternative(rendered['text'], subtype='text')
-    message.add_alternative(rendered['html'], subtype='html')
+    message['subject'] = data['subject']
+    message['to'] = data['to']
+    message['from'] = data['from']
+    message.add_alternative(data['text'], subtype='text')
+    message.add_alternative(data['html'], subtype='html')
     return message
 
 

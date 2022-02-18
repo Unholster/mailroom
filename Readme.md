@@ -24,7 +24,7 @@ poetry run mailroom
 ```sh
 curl \
     -H content-type:application/json \
-    -d '{"template": { "subject" : "Hello {first_name}", "body": "Greetings {first_name} {last_name}"}, "data": [{"first_name": "Seba", "last_name": "acuna"}]}' \
+    -d '{"template": { "from": "sacuna@gmail.com", "to": ["sacuna@gmail.com"], "subject" : "Hello {{first_name}}", "body": "Greetings {{first_name}} {{last_name}}"}, "data": [{"first_name": "Seba", "last_name": "acuna"}]}' \
     -X POST \
     http://localhost:5000/jobs
 ```
