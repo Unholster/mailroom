@@ -5,15 +5,14 @@ import logging
 import smtplib
 from typing import Iterable, Tuple, List
 from decouple import config
-from flask import request
-from flask_lambda import FlaskLambda
+from flask import request, Flask
 from yarl import URL
 from .datatemplate import DataTemplate
 
 
 logger = logging.getLogger(__name__)
 
-app = FlaskLambda(__name__)
+application = app = Flask(__name__)
 
 
 MAIL_URL = config('MAIL_URL', '', cast=URL)
@@ -26,11 +25,9 @@ def debug_info():
     print(f'MAIL_URL = "{MAIL_URL}"')
     print('=================')
 
-    assert (
-        MAIL_URL is None
-        or MAIL_URL.scheme in ('smtp'),
+    assert \
+        MAIL_URL is None or MAIL_URL.scheme in ('smtp'), \
         'MAIL_URL must use smtp:// scheme'
-    )
 
 
 @app.route('/jobs', methods=['POST'])
@@ -91,7 +88,8 @@ def send_message(
 ) -> None:
     '''Sends an email message to the server specified by MAIL_URL'''
 
-    if MAIL_URL is None:
+    if not MAIL_URL:
+        print(message)
         return
 
     with smtplib.SMTP(MAIL_URL.host, MAIL_URL.port) as connection:

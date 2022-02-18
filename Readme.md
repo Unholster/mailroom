@@ -5,9 +5,9 @@ Mailroom is a service that allows sending templated e-mails.
 
 Currently supports:
     - [ ] Single e-mail per job
-    - [ ] Templating using [Jinja2](https://jinja2docs.readthedocs.io/en/stable/)
+    - [x] Templating using [Jinja2](https://jinja2docs.readthedocs.io/en/stable/)
     - [ ] Storing templates on server
-    - [ ] Send through SMTP + TLS, configurable by env var
+    - [x] Send through SMTP, configurable by env var
     - [ ] Postgres backend
     - [ ] Expose handler function compatible with AWS serverless stack (API Gateway, AWS Lambda)
     - [ ] Supports multiple attachments (i.e. plain text + html text versions)
@@ -16,7 +16,7 @@ Currently supports:
 
 ```sh
 # Run with defaults
-poetry run mailroom
+MAIL_URL=smtp://user:pass@server:port poetry run mailroom
 ```
 
 ## Send an e-mail
