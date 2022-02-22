@@ -1,7 +1,7 @@
 from mailroom.datatemplate import DataTemplate
 
 
-def test_dicttemplates():
+def test_dict_template():
     dt = DataTemplate({
         'foo': '{{foo}}',
         'nested': {
@@ -19,3 +19,11 @@ def test_dicttemplates():
         'nested': {'bar': 'This is BAR'},
         'list': ['FOO', 'BAR', 'GROO'],
     }
+
+
+def test_str_noop_template():
+    dt = DataTemplate('Nothing here')
+
+    dr = dt.render(foo='FOO', bar='BAR')
+
+    assert dr == 'Nothing here'

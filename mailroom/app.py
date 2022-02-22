@@ -58,7 +58,6 @@ def post_jobs():
     for item in payload['data']:
         try:
             data = defaultdict(str, template.render(**item))
-            print(data)
             send_message(
                 from_address=data['from'],
                 to_address=data['to'],
@@ -66,6 +65,7 @@ def post_jobs():
             )
             succeeded.append(True)
         except Exception as e:
+            logger.exception(e)
             errors.append(e)
 
     return (
@@ -93,7 +93,6 @@ def send_message(
         return
 
     with smtplib.SMTP(MAIL_URL.host, MAIL_URL.port) as connection:
-        connection.set_debuglevel(1)
         connection.starttls()
         if MAIL_URL.user:
             connection.login(
@@ -108,6 +107,7 @@ def make_message(data: dict) -> EmailMessage:
     message['subject'] = data['subject']
     message['to'] = data['to']
     message['from'] = data['from']
+    message['reply-to'] = data['from']
     message.add_alternative(data['text'], subtype='text')
     message.add_alternative(data['html'], subtype='html')
     return message
